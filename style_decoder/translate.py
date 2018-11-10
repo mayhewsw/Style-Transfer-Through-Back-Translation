@@ -1,6 +1,5 @@
 from __future__ import division
 
-import onmt
 from onmt.translate.translator import *
 
 import torch
@@ -15,57 +14,18 @@ from onmt.opts import *
 
 translate_opts(parser)
 
-## When using english-french trained MT model, uncomment -model
-## and comment -encoder_model and -decoder_model
-# parser.add_argument('-model', dest='models', metavar='MODEL',
-#                    nargs='+', type=str, default=[], required=True,
-#                    help='Path to model .pt file(s). '
-#                    'Multiple models can be specified, '
-#                    'for ensemble decoding.')
-
-# #parser.add_argument('-encoder_model', required=True,
-# #                    help='Path to model .pt file')
-# #parser.add_argument('-decoder_model', required=True,
-# #                    help='Path to model .pt file')
-# parser.add_argument('-src',   required=True,
-#                     help='Source sequence to decode (one line per sequence)')
-# parser.add_argument('-tgt',
-#                     help='True target sequence (optional)')
-# parser.add_argument('-output', default='pred.txt',
-#                     help="""Path to output the predictions (each line will
-#                     be the decoded sequence""")
-# parser.add_argument('-beam_size',  type=int, default=5,
-#                     help='Beam size')
-# parser.add_argument('-batch_size', type=int, default=30,
-#                     help='Batch size')
-# parser.add_argument('-max_sent_length', type=int, default=100,
-#                     help='Maximum sentence length.')
-# parser.add_argument('-replace_unk', action="store_true",
-#                     help="""Replace the generated UNK tokens with the source
-#                     token that had the highest attention weight. If phrase_table
-#                     is provided, it will lookup the identified source token and
-#                     give the corresponding target token. If it is not provided
-#                     (or the identified source token does not exist in the
-#                     table) then it will copy the source token""")
-# parser.add_argument('-verbose', action="store_true",
-#                     help='Print scores and predictions for each sentence')
-# parser.add_argument('-n_best', type=int, default=1,
-#                     help="""If verbose is set, will output the n_best
-#                     decoded sentences""")
-# parser.add_argument('-gpu', type=int, default=-1,
-#                     help="Device to run on")
-
-
 
 def reportScore(name, scoreTotal, wordsTotal):
     print("%s AVG SCORE: %.4f, %s PPL: %.4f" % (
         name, scoreTotal / wordsTotal,
         name, math.exp(-scoreTotal/wordsTotal)))
 
+
 def addone(f):
     for line in f:
         yield line
     yield None
+
 
 def main():
     opt = parser.parse_args()
@@ -74,10 +34,6 @@ def main():
         torch.cuda.set_device(opt.gpu)
 
     translator = build_translator(opt, report_score=True)
-
-        
-    #translator = onmt2.Translator(opt)
-    #translator = onmt2.Translator_style(opt)
 
     outF = codecs.open(opt.output, 'w', 'utf-8')
 
