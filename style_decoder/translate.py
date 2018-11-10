@@ -1,6 +1,8 @@
 from __future__ import division
 
 import onmt
+from onmt.translate.translator import *
+
 import torch
 import argparse
 import math
@@ -8,41 +10,50 @@ import codecs
 
 parser = argparse.ArgumentParser(description='translate.py')
 
+
+from onmt.opts import *
+
+translate_opts(parser)
+
 ## When using english-french trained MT model, uncomment -model
 ## and comment -encoder_model and -decoder_model
-#parser.add_argument('-model', required=True,
-#                    help='Path to model .pt file')
-parser.add_argument('-encoder_model', required=True,
-                    help='Path to model .pt file')
-parser.add_argument('-decoder_model', required=True,
-                    help='Path to model .pt file')
-parser.add_argument('-src',   required=True,
-                    help='Source sequence to decode (one line per sequence)')
-parser.add_argument('-tgt',
-                    help='True target sequence (optional)')
-parser.add_argument('-output', default='pred.txt',
-                    help="""Path to output the predictions (each line will
-                    be the decoded sequence""")
-parser.add_argument('-beam_size',  type=int, default=5,
-                    help='Beam size')
-parser.add_argument('-batch_size', type=int, default=30,
-                    help='Batch size')
-parser.add_argument('-max_sent_length', type=int, default=100,
-                    help='Maximum sentence length.')
-parser.add_argument('-replace_unk', action="store_true",
-                    help="""Replace the generated UNK tokens with the source
-                    token that had the highest attention weight. If phrase_table
-                    is provided, it will lookup the identified source token and
-                    give the corresponding target token. If it is not provided
-                    (or the identified source token does not exist in the
-                    table) then it will copy the source token""")
-parser.add_argument('-verbose', action="store_true",
-                    help='Print scores and predictions for each sentence')
-parser.add_argument('-n_best', type=int, default=1,
-                    help="""If verbose is set, will output the n_best
-                    decoded sentences""")
-parser.add_argument('-gpu', type=int, default=-1,
-                    help="Device to run on")
+# parser.add_argument('-model', dest='models', metavar='MODEL',
+#                    nargs='+', type=str, default=[], required=True,
+#                    help='Path to model .pt file(s). '
+#                    'Multiple models can be specified, '
+#                    'for ensemble decoding.')
+
+# #parser.add_argument('-encoder_model', required=True,
+# #                    help='Path to model .pt file')
+# #parser.add_argument('-decoder_model', required=True,
+# #                    help='Path to model .pt file')
+# parser.add_argument('-src',   required=True,
+#                     help='Source sequence to decode (one line per sequence)')
+# parser.add_argument('-tgt',
+#                     help='True target sequence (optional)')
+# parser.add_argument('-output', default='pred.txt',
+#                     help="""Path to output the predictions (each line will
+#                     be the decoded sequence""")
+# parser.add_argument('-beam_size',  type=int, default=5,
+#                     help='Beam size')
+# parser.add_argument('-batch_size', type=int, default=30,
+#                     help='Batch size')
+# parser.add_argument('-max_sent_length', type=int, default=100,
+#                     help='Maximum sentence length.')
+# parser.add_argument('-replace_unk', action="store_true",
+#                     help="""Replace the generated UNK tokens with the source
+#                     token that had the highest attention weight. If phrase_table
+#                     is provided, it will lookup the identified source token and
+#                     give the corresponding target token. If it is not provided
+#                     (or the identified source token does not exist in the
+#                     table) then it will copy the source token""")
+# parser.add_argument('-verbose', action="store_true",
+#                     help='Print scores and predictions for each sentence')
+# parser.add_argument('-n_best', type=int, default=1,
+#                     help="""If verbose is set, will output the n_best
+#                     decoded sentences""")
+# parser.add_argument('-gpu', type=int, default=-1,
+#                     help="Device to run on")
 
 
 
@@ -62,8 +73,11 @@ def main():
     if opt.cuda:
         torch.cuda.set_device(opt.gpu)
 
-    #translator = onmt.Translator(opt)
-    translator = onmt.Translator_style(opt)
+    translator = build_translator(opt, report_score=True)
+
+        
+    #translator = onmt2.Translator(opt)
+    #translator = onmt2.Translator_style(opt)
 
     outF = codecs.open(opt.output, 'w', 'utf-8')
 
@@ -77,8 +91,8 @@ def main():
     for line in addone(codecs.open(opt.src, "r", "utf-8")):
         
         if line is not None:
-            srcTokens = line.split()
-            srcBatch += [srcTokens]
+            #srcTokens = line.split()
+            srcBatch.append(line) #[srcTokens]
             if tgtF:
                 tgtTokens = tgtF.readline().split() if tgtF else None
                 tgtBatch += [tgtTokens]
@@ -90,8 +104,12 @@ def main():
             if len(srcBatch) == 0:
                 break
 
-        predBatch, predScore, goldScore = translator.translate(srcBatch, tgtBatch)
- 
+        #predBatch, predScore, goldScore = translator.translate(srcBatch, tgtBatch)
+        all_scores, all_predictions = translator.translate(src_data_iter=srcBatch, batch_size=2)
+        predScore = all_scores
+        predBatch = all_predictions
+        #print(all_scores, all_predictions)
+        
         predScoreTotal += sum(score[0] for score in predScore)
         predWordsTotal += sum(len(x[0]) for x in predBatch)
         if tgtF is not None:
